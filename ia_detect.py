@@ -11,15 +11,21 @@ camara_activa = threading.Event()
 _hilo_cam  = None
 _modelo = None
 
-
+_tts_lock = threading.Lock()
 
 def hablar(texto):
-    engine = pyttsx3.init()
-    engine.setProperty("rate", 170)
-    engine.say(texto)
-    engine.runAndWait()
-    engine.stop()
-    del engine
+    with _tts_lock:
+        engine = pyttsx3.init()
+        try:
+            engine.setProperty("rate", 170)
+            engine.say(texto)
+            engine.runAndWait()
+        finally:
+            try:
+                engine.stop()
+            except Exception:
+                pass
+            del engine
 
 
 # NUEVO: aquí la cámara guarda lo que ve en cada frame
@@ -105,6 +111,8 @@ def cerrar_camara():
         print("Cerrando cámara...")
         if _hilo_cam is not None:
             _hilo_cam.join(timeout=2)
+            if _hilo_cam.is_alive():
+                print("Advertencia: el hilo de cámara no terminó a tiempo")
             _hilo_cam = None
     else:
         print("La cámara no está activa.")
@@ -122,8 +130,9 @@ def describe():
     elif personas == 1:
         return f"Veo 1 humano en frente de ti."
     else:
-        promedio = sum(confianzas) / len(confianzas)
-        return f"Veo que estas rodeado de persona. Veo {personas} humanos en frente de ti (confianza promedio {promedio:.2f})."
+        #SE CORRIGE EL ERROR GRAMATICAL, Y SE DA COMO RESPUESTA EL TEXTO DE CUANTAS PERSONAS PERCIBE EL SISTEMA
+       promedio = sum(confianzas) / len(confianzas)
+       return f"Veo que estas rodeado de personas. Veo {personas} humanos en frente de ti (confianza promedio {promedio:.2f})."
     
 
         
